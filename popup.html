@@ -153,9 +153,37 @@
           Upgrade to Pro
         </button>
         <p class="footer-note">Once logged in, refresh your YouTube page to start translating.</p>
+
+        <section
+          id="freeUsagePanel"
+          class="free-usage-panel hidden"
+          aria-label="Free plan translation allowances"
+        >
+          <p class="free-usage-title">Free plan remaining</p>
+          <div class="free-usage-row">
+            <div class="free-usage-label-wrap">
+              <span class="free-usage-label">Today</span>
+              <span id="dailyAllowanceText" class="free-usage-value">—</span>
+            </div>
+            <div class="free-usage-meter" aria-hidden="true">
+              <div id="dailyAllowanceBar" class="free-usage-meter-fill"></div>
+            </div>
+          </div>
+          <div class="free-usage-row">
+            <div class="free-usage-label-wrap">
+              <span class="free-usage-label">This month</span>
+              <span id="monthlyAllowanceText" class="free-usage-value">—</span>
+            </div>
+            <div class="free-usage-meter" aria-hidden="true">
+              <div id="monthlyAllowanceBar" class="free-usage-meter-fill free-usage-meter-fill--month"></div>
+            </div>
+          </div>
+          <p id="freeUsageHint" class="free-usage-hint hidden"></p>
+        </section>
       </footer>
     </div>
 
+    <script src="lib/free-usage.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

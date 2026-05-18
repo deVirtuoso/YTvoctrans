@@ -31,6 +31,15 @@ const linkRating = $("linkRating")
 const linkUpgrade = $("linkUpgrade")
 const btnGoogle = $("btnGoogle")
 const btnSignOut = $("btnSignOut")
+const freeUsagePanel = $("freeUsagePanel")
+const dailyAllowanceText = $("dailyAllowanceText")
+const monthlyAllowanceText = $("monthlyAllowanceText")
+const dailyAllowanceBar = $("dailyAllowanceBar")
+const monthlyAllowanceBar = $("monthlyAllowanceBar")
+const freeUsageHint = $("freeUsageHint")
+
+/** @type {string | null} */
+let activeEmail = null
 
 linkRating.href = GOOGLE_WEBSTORE_REVIEW_URL
 
@@ -136,15 +145,85 @@ async function ensureTrialStart(email, isNewAccount) {
   return start
 }
 
+function pluralize(count, singular, plural) {
+  return count === 1 ? singular : plural || `${singular}s`
+}
+
+function formatAllowanceValue(remaining, limit) {
+  if (remaining <= 0) {
+    return `None left (${limit} used)`
+  }
+  return `${remaining} of ${limit} ${pluralize(remaining, "translation")} left`
+}
+
+function setMeter(barEl, remaining, limit) {
+  const pct = limit > 0 ? Math.min(100, (remaining / limit) * 100) : 0
+  barEl.style.width = `${pct}%`
+}
+
+async function refreshFreeUsageDisplay(email = activeEmail) {
+  if (!email || typeof FreeUsage === "undefined") {
+    freeUsagePanel.classList.add("hidden")
+    return
+  }
+
+  const extAuth = await storageGet(EXTENSION_AUTH_KEY)
+  if (extAuth?.access?.entitlementActive === true) {
+    freeUsagePanel.classList.add("hidden")
+    return
+  }
+
+  const summary = await FreeUsage.getUsageSummary(email)
+  if (!summary) {
+    freeUsagePanel.classList.add("hidden")
+    return
+  }
+
+  dailyAllowanceText.textContent = formatAllowanceValue(
+    summary.dailyRemaining,
+    summary.dailyLimit
+  )
+  monthlyAllowanceText.textContent = formatAllowanceValue(
+    summary.monthlyRemaining,
+    summary.monthlyLimit
+  )
+  setMeter(dailyAllowanceBar, summary.dailyRemaining, summary.dailyLimit)
+  setMeter(monthlyAllowanceBar, summary.monthlyRemaining, summary.monthlyLimit)
+
+  const exhausted = summary.dailyRemaining <= 0 || summary.monthlyRemaining <= 0
+  freeUsagePanel.classList.toggle("is-exhausted", exhausted)
+
+  if (summary.dailyRemaining <= 0 && summary.monthlyRemaining <= 0) {
+    freeUsageHint.textContent =
+      "Daily and monthly free translations are used. Upgrade to Pro for unlimited access."
+    freeUsageHint.classList.remove("hidden")
+  } else if (summary.dailyRemaining <= 0) {
+    freeUsageHint.textContent = "Today's free translation is used. More available tomorrow."
+    freeUsageHint.classList.remove("hidden")
+  } else if (summary.monthlyRemaining <= 0) {
+    freeUsageHint.textContent = "Monthly free translations are used. Resets next calendar month."
+    freeUsageHint.classList.remove("hidden")
+  } else {
+    freeUsageHint.textContent = ""
+    freeUsageHint.classList.add("hidden")
+  }
+
+  freeUsagePanel.classList.remove("hidden")
+}
+
 function setSignedInUI(email) {
+  activeEmail = normalizeEmail(email)
   userEmailDisplay.textContent = email
   signedInPanel.classList.remove("hidden")
   authPanel.classList.add("collapsed")
+  void refreshFreeUsageDisplay(activeEmail)
 }
 
 function setSignedOutUI() {
+  activeEmail = null
   signedInPanel.classList.add("hidden")
   authPanel.classList.remove("collapsed")
+  freeUsagePanel.classList.add("hidden")
   $("signInEmail").value = ""
   $("signInPassword").value = ""
   $("signUpEmail").value = ""
@@ -362,6 +441,19 @@ btnSignOut.addEventListener("click", async () => {
 
 linkUpgrade.addEventListener("click", () => {
   chrome.tabs.create({ url: UPGRADE_URL })
+})
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local" || !activeEmail) return
+  if (changes[FreeUsage.USAGE_STORAGE_KEY] || changes[POPUP_SESSION_KEY] || changes[EXTENSION_AUTH_KEY]) {
+    void refreshFreeUsageDisplay(activeEmail)
+  }
+})
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && activeEmail) {
+    void refreshFreeUsageDisplay(activeEmail)
+  }
 })
 
 bootstrap()
