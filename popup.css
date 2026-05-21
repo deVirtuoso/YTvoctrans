@@ -553,5 +553,6 @@ body {
 }
 
 .auth-panel.collapsed ~ .modal-footer {
+  margin-top: 12px;
   padding-top: 10px;
 }

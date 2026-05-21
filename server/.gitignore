@@ -1,0 +1,3 @@
+node_modules/
+public/audio/*.mp3
+.env
