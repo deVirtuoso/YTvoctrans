@@ -1,24 +1,22 @@
-# TranslateTube Voice Translation Lite
+# VoiceTranslate Lite
 
-This is a stripped-down unpacked Chrome extension build that keeps the existing
-voice-translation runtime bundles intact.
+VoiceTranslate Lite is a streamlined Chrome extension for real-time dubbed voice translation and captioning on YouTube, coupled with a serverless user subscription management backend.
 
-Kept:
+## Structure
 
-- YouTube content script
-- Voice/caption bridge scripts
-- Background service worker for auth/service messages
-- Fonts and runtime image assets used by the content script
-- Extension icons
+- **Extension Root**: Contains the unpacked Chrome Extension assets (`manifest.json`, `popup.html`, content scripts, background worker, assets, etc.).
+- **`backend/`**: A serverless Next.js web application designed to run on Vercel. It processes translation jobs, serves audio segments from a Turso SQLite database, manages Stripe subscription states, handles Google OAuth 2.0 logins, and sends automated transactional emails.
+- **`webstore-assets/`**: High-quality promotional images, screenshots, tiles, and thumbnails for Chrome Web Store publishing.
+- **`stripe-branding/`**: Official 128x128 and 512x512 logo icons prepared for Stripe Dashboard checkout branding.
 
-Removed:
+## Load the Extension
 
-- Popup app
-- Delta flyer tab
-- Chrome Web Store metadata
-- Locale packs
-- Original update URL
+1. Open Google Chrome.
+2. Navigate to `chrome://extensions/`.
+3. Enable **Developer mode** (top-right toggle).
+4. Click **Load unpacked** (top-left button).
+5. Select this project root folder.
 
-Load this folder with Chrome's "Load unpacked":
+## Deployment & Setup
 
-`stripped-voice-translation`
+For instructions on deploying the authentication and translation serverless backend, refer to the [backend README](file:///h:/NETWORKPEN/AI%20Works/YTvoctrans-main/backend/README.md).

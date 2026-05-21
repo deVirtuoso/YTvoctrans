@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "TranslateTube Voice Translation Lite",
+  "name": "VoiceTranslate Lite",
   "description": "Stripped-down YouTube voice translation runtime.",
   "version": "2",
   "author": "Vlamirand",
@@ -12,7 +12,7 @@
     "128": "icon128.plasmo.3c1ed2d2.png"
   },
   "action": {
-    "default_title": "TranslateTube Voice Translation Lite",
+    "default_title": "VoiceTranslate Lite",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icon16.plasmo.6c567d50.png",
@@ -30,13 +30,11 @@
     "tabs"
   ],
   "host_permissions": [
-    "https://*.translatetube.io/*",
-    "https://auth.translatetube.io/*"
+    "https://voicetranslate-backend.vercel.app/*"
   ],
   "externally_connectable": {
     "matches": [
-      "https://*.translatetube.io/*",
-      "https://auth.translatetube.io/*"
+      "https://voicetranslate-backend.vercel.app/*"
     ]
   },
   "content_scripts": [

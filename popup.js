@@ -1,10 +1,11 @@
 /** @typedef {{ email: string, signedInAt: number }} PopupSession */
 
+const AUTH_BASE_URL = "https://voicetranslate-backend.vercel.app"
 const GOOGLE_WEBSTORE_REVIEW_URL =
-  "https://chromewebstore.google.com/detail/translatetube-%D0%BF%D0%B5%D1%80%D0%B5%D0%B2%D0%BE%D0%B4%D1%87%D0%B8%D0%BA/jlbhdllblndadgnmpmejihonkjgbdghn/reviews"
+  "https://chromewebstore.google.com/detail/jlbhdllblndadgnmpmejihonkjgbdghn/reviews"
 
-const UPGRADE_URL = "https://buy.stripe.com/cNifZhcPwfj5caI9Wx5os00"
-const AUTH_GOOGLE_URL = "https://auth.translatetube.io"
+const UPGRADE_URL = AUTH_BASE_URL + "/api/checkout"
+const AUTH_GOOGLE_URL = AUTH_BASE_URL + "/api/auth/google"
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 
@@ -307,14 +308,8 @@ function validateSignUp(email, password) {
   return valid
 }
 
-async function authenticateLocal(email, password, isSignUp) {
+async function authenticateLocal(email, password) {
   const normalized = normalizeEmail(email)
-
-  if (isSignUp) {
-    await ensureTrialStart(normalized, true)
-    await saveSession(normalized)
-    return normalized
-  }
 
   if (normalized === DEV_TEST_EMAIL && password === DEV_TEST_PASSWORD) {
     await ensureTrialStart(normalized, false)
@@ -322,30 +317,47 @@ async function authenticateLocal(email, password, isSignUp) {
     return normalized
   }
 
-  const storedUsers = (await storageGet("popupRegisteredUsers-v1")) || {}
-  if (storedUsers[normalized]) {
-    if (storedUsers[normalized] !== password) {
-      throw new Error("Incorrect password. Try again or create an account.")
-    }
-    await ensureTrialStart(normalized, false)
-    await saveSession(normalized)
-    return normalized
+  const response = await fetch(`${AUTH_BASE_URL}/api/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ email, password })
+  })
+
+  const data = await response.json()
+  if (!response.ok || !data.ok) {
+    throw new Error(data.error || "Sign in failed")
   }
 
-  throw new Error("Account not found. Use Sign Up to register.")
+  try {
+    await chrome.runtime.sendMessage({ type: "REFRESH_EXTENSION_AUTH" })
+  } catch (e) {
+    /* background may be booting */
+  }
+
+  await ensureTrialStart(normalized, false)
+  await saveSession(normalized)
+  return normalized
 }
 
 async function registerLocal(email, password) {
   const normalized = normalizeEmail(email)
-  const storedUsers = (await storageGet("popupRegisteredUsers-v1")) || {}
-  if (storedUsers[normalized] && normalized !== DEV_TEST_EMAIL) {
-    throw new Error("An account with this email already exists. Sign in instead.")
+  
+  const response = await fetch(`${AUTH_BASE_URL}/api/auth/signup`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ email, password })
+  })
+
+  const data = await response.json()
+  if (!response.ok || !data.ok) {
+    throw new Error(data.error || "Sign up failed")
   }
-  storedUsers[normalized] = password
-  await storageSet("popupRegisteredUsers-v1", storedUsers)
-  await ensureTrialStart(normalized, true)
-  await saveSession(normalized)
-  return normalized
+
+  throw new Error("Confirmation email sent! Please check your inbox and verify your email before logging in.")
 }
 
 async function completeSignIn(email) {

@@ -1,0 +1,79 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+model User {
+  id                   String        @id @default(uuid())
+  email                String        @unique
+  passwordHash         String
+  isVerified           Boolean       @default(false)
+  verificationToken    String?
+  resetToken           String?
+  resetTokenExpiresAt  DateTime?
+  createdAt            DateTime      @default(now)
+  sessions             Session[]
+  subscription         Subscription?
+  allowance            Allowance?
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id                   String    @id @default(uuid())
+  userId               String    @unique
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  status               String    // "active", "cancelled", "past_due", "unpaid", "expired"
+  currentPeriodEnd     DateTime?
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Allowance {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  dailyUsed   Int      @default(0)
+  monthlyUsed Int      @default(0)
+  lastUsedAt  DateTime @default(now)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Job {
+  id          String   @id
+  videoId     String
+  sourceUrl   String
+  srcLang     String
+  tgtLang     String
+  status      String   // "processing", "completed", "failed"
+  progress    Int      @default(0)
+  error       String?
+  createdAt   DateTime @default(now)
+}
+
+model AudioSegment {
+  id        String   @id
+  jobId     String
+  idx       Int
+  audioData Bytes
+  createdAt DateTime @default(now)
+}
+
+model TranslationSegment {
+  id        Int      @id @default(autoincrement())
+  jobId     String
+  idx       Int
+  t0        Float
+  t1        Float
+  text      String
+  subsJson  String
+}
