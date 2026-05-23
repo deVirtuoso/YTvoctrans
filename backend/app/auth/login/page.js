@@ -130,6 +130,10 @@ function LoginFormContent() {
       
       <p style={styles.footerNote}>
         Verify your account in the browser to sync extension state automatically.
+        <br />
+        <Link href="/privacy" style={styles.footerLink}>
+          Privacy Policy
+        </Link>
       </p>
     </div>
   );
@@ -300,5 +304,12 @@ const styles = {
     color: '#64748b',
     textAlign: 'center',
     margin: '24px 0 0 0',
+  },
+  footerLink: {
+    color: '#a5b4fc',
+    textDecoration: 'none',
+    display: 'inline-block',
+    marginTop: '8px',
+    transition: 'color 0.2s',
   },
 };

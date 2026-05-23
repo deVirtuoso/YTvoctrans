@@ -28,7 +28,12 @@ export default function HomePage() {
         </div>
         
         <div style={styles.footer}>
-          <p style={styles.footerText}>VoiceTranslate Lite &copy; 2026. All rights reserved.</p>
+          <p style={styles.footerText}>
+            VoiceTranslate Lite &copy; 2026. All rights reserved. &bull;{' '}
+            <Link href="/privacy" style={styles.footerLink}>
+              Privacy Policy
+            </Link>
+          </p>
         </div>
       </div>
     </div>
@@ -144,5 +149,10 @@ const styles = {
     fontSize: '13px',
     color: '#475569',
     margin: 0,
+  },
+  footerLink: {
+    color: '#64748b',
+    textDecoration: 'none',
+    transition: 'color 0.2s',
   },
 };
