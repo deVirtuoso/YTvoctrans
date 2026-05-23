@@ -30,11 +30,11 @@
     "tabs"
   ],
   "host_permissions": [
-    "https://voicetranslate-backend.vercel.app/*"
+    "https://y-tvoctrans.vercel.app/*"
   ],
   "externally_connectable": {
     "matches": [
-      "https://voicetranslate-backend.vercel.app/*"
+      "https://y-tvoctrans.vercel.app/*"
     ]
   },
   "content_scripts": [

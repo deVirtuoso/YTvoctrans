@@ -59,7 +59,7 @@ export async function GET(req) {
         args: [jobId],
       });
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://voicetranslate-backend.vercel.app';
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://y-tvoctrans.vercel.app';
 
       segments = segmentsRes.rows.map(row => {
         let subs = [];

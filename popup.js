@@ -1,8 +1,8 @@
 /** @typedef {{ email: string, signedInAt: number }} PopupSession */
 
-const AUTH_BASE_URL = "https://voicetranslate-backend.vercel.app"
+const AUTH_BASE_URL = "https://y-tvoctrans.vercel.app"
 const GOOGLE_WEBSTORE_REVIEW_URL =
-  "https://chromewebstore.google.com/detail/jlbhdllblndadgnmpmejihonkjgbdghn/reviews"
+  "https://chromewebstore.google.com/detail/pehpbnbmhhgbnhjmcdggodlfjlhfggja/reviews"
 
 const UPGRADE_URL = AUTH_BASE_URL + "/api/checkout"
 const AUTH_GOOGLE_URL = AUTH_BASE_URL + "/api/auth/google"

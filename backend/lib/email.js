@@ -1,8 +1,8 @@
 import { Resend } from 'resend';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const FROM_EMAIL = process.env.FROM_EMAIL || 'VoiceTranslate <noreply@voicetranslate-backend.vercel.app>';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://voicetranslate-backend.vercel.app';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'VoiceTranslate <noreply@y-tvoctrans.vercel.app>';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://y-tvoctrans.vercel.app';
 
 export async function sendVerificationEmail(email, token) {
   const verifyUrl = `${APP_URL}/api/auth/verify?token=${token}`;

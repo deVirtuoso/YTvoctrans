@@ -46,7 +46,7 @@ export async function GET(req) {
   try {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://voicetranslate-backend.vercel.app';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://y-tvoctrans.vercel.app';
     const redirectUri = `${appUrl}/api/auth/google/callback`;
 
     // 1. Exchange code for access token

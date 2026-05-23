@@ -15,7 +15,7 @@ export default function HomePage() {
 
         <div style={styles.actions}>
           <a 
-            href="https://chromewebstore.google.com/detail/jlbhdllblndadgnmpmejihonkjgbdghn" 
+            href="https://chromewebstore.google.com/detail/pehpbnbmhhgbnhjmcdggodlfjlhfggja" 
             target="_blank" 
             rel="noopener noreferrer" 
             style={styles.primaryBtn}

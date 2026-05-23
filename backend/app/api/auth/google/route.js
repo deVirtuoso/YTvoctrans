@@ -7,7 +7,7 @@ export async function OPTIONS(req) {
 export async function GET(req) {
   const headers = corsHeaders(req);
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://voicetranslate-backend.vercel.app';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://y-tvoctrans.vercel.app';
   const redirectUri = `${appUrl}/api/auth/google/callback`;
 
   if (!clientId) {

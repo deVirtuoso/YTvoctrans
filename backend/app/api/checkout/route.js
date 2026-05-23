@@ -5,7 +5,7 @@ import crypto from 'crypto';
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 const priceId = process.env.STRIPE_PRICE_ID;
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://voicetranslate-backend.vercel.app';
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://y-tvoctrans.vercel.app';
 
 export async function GET(req) {
   const sessionId = getSessionIdFromRequest(req);

@@ -71,9 +71,9 @@ Allows seamless "Sign in with Google" inside the extension popup.
    - Select application type **Web Application**.
    - Add **Authorized Redirect URIs**:
      ```
-     https://voicetranslate-backend.vercel.app/api/auth/google/callback
+     https://y-tvoctrans.vercel.app/api/auth/google/callback
      ```
-     *(If you map a custom domain on Vercel, swap `voicetranslate-backend.vercel.app` with your custom domain).*
+     *(If you map a custom domain on Vercel, swap `y-tvoctrans.vercel.app` with your custom domain).*
 4. **Copy IDs**:
    - Save the **Client ID** and **Client Secret** as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 
@@ -96,7 +96,7 @@ Tracks paid licenses, active/cancelled states, and automatically lifts translati
    - Navigate to **Developers** -> **Webhooks** -> **Add endpoint**.
    - Set the endpoint URL to:
      ```
-     https://voicetranslate-backend.vercel.app/api/webhooks/stripe
+     https://y-tvoctrans.vercel.app/api/webhooks/stripe
      ```
    - Click **Select events** and enable:
      - `checkout.session.completed`
@@ -124,7 +124,7 @@ Vercel hosts the backend serverless functions, serving global users with zero co
      - `TURSO_DB_AUTH_TOKEN`
      - `RESEND_API_KEY`
      - `FROM_EMAIL` (e.g. `VoiceTranslate <noreply@yourdomain.com>`)
-     - `NEXT_PUBLIC_APP_URL` (e.g. `https://voicetranslate-backend.vercel.app`)
+     - `NEXT_PUBLIC_APP_URL` (e.g. `https://y-tvoctrans.vercel.app`)
      - `GOOGLE_CLIENT_ID`
      - `GOOGLE_CLIENT_SECRET`
      - `STRIPE_SECRET_KEY`
@@ -141,7 +141,7 @@ The front-end Chrome extension is fully pre-wired to connect directly to the pro
 
 1. **Rebranding Verification**:
    - All branding references have been successfully updated to **VoiceTranslate Lite**.
-   - `manifest.json` host permissions allow cross-origin handshakes with `https://voicetranslate-backend.vercel.app/*`.
+   - `manifest.json` host permissions allow cross-origin handshakes with `https://y-tvoctrans.vercel.app/*`.
    - `popup.js` connects session checkups directly with production backend URL.
 2. **Install in Developer Mode**:
    - Open Google Chrome.
