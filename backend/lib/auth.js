@@ -1,6 +1,12 @@
 import bcrypt from 'bcryptjs';
 import db from './db';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  process.env.TURSO_DB_AUTH_TOKEN ||
+  'voicetranslate-dev-jwt-secret-change-me';
 
 // db.js wraps the libsql client so every query awaits initialization on the
 // first call. No fire-and-forget initDb() needed here.
@@ -30,6 +36,20 @@ export async function validateSession(sessionId) {
   if (!sessionId) return null;
 
   try {
+    let idToValidate = sessionId;
+
+    if (String(sessionId).includes('.')) {
+      try {
+        const decoded = jwt.verify(sessionId, JWT_SECRET);
+        idToValidate = decoded?.sid;
+      } catch (error) {
+        console.error('[Auth Error] Failed to verify service token:', error);
+        return null;
+      }
+    }
+
+    if (!idToValidate) return null;
+
     const result = await db.execute({
       sql: `
         SELECT s.id as sessionId, s.expires_at, u.id as userId, u.email, u.is_verified
@@ -37,7 +57,7 @@ export async function validateSession(sessionId) {
         JOIN users u ON s.user_id = u.id
         WHERE s.id = ?
       `,
-      args: [sessionId],
+      args: [idToValidate],
     });
 
     if (result.rows.length === 0) return null;
