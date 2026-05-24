@@ -4,7 +4,7 @@ const AUTH_BASE_URL = "https://y-tvoctrans.vercel.app"
 const GOOGLE_WEBSTORE_REVIEW_URL =
   "https://chromewebstore.google.com/detail/pehpbnbmhhgbnhjmcdggodlfjlhfggja/reviews"
 
-const UPGRADE_URL = AUTH_BASE_URL + "/api/checkout"
+const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/cNifZhcPwfj5caI9Wx5os00"
 const AUTH_GOOGLE_URL = AUTH_BASE_URL + "/api/auth/google"
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
@@ -451,8 +451,14 @@ btnSignOut.addEventListener("click", async () => {
   setSignedOutUI()
 })
 
-linkUpgrade.addEventListener("click", () => {
-  chrome.tabs.create({ url: UPGRADE_URL })
+linkUpgrade.addEventListener("click", async () => {
+  const extAuth = await storageGet(EXTENSION_AUTH_KEY)
+  const userId = extAuth?.user?.id || ""
+  const email = activeEmail || extAuth?.user?.email || ""
+  const url = new URL(STRIPE_PAYMENT_LINK)
+  if (userId) url.searchParams.set("client_reference_id", userId)
+  if (email) url.searchParams.set("prefilled_email", email)
+  chrome.tabs.create({ url: url.toString() })
 })
 
 chrome.storage.onChanged.addListener((changes, area) => {

@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import db from '@/lib/db';
 import { headers } from 'next/headers';
+import crypto from 'crypto';
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -36,6 +37,7 @@ export async function POST(req) {
         const session = event.data.object;
         const customerId = session.customer;
         const subscriptionId = session.subscription;
+        const userIdFromRef = session.client_reference_id || null;
 
         if (!subscriptionId) {
           console.warn('[Stripe Webhook] checkout.session.completed without subscription id, skipping.');
@@ -51,14 +53,58 @@ export async function POST(req) {
           : null;
         const status = subscription.status;
 
-        await db.execute({
-          sql: `
-            UPDATE subscriptions
-            SET stripe_subscription_id = ?, status = ?, current_period_end = ?
-            WHERE stripe_customer_id = ?
-          `,
-          args: [subscriptionId, status, currentPeriodEnd, customerId],
+        // First try linking by stripe_customer_id (covers the /api/checkout path
+        // where we pre-created the customer row).
+        const byCustomer = await db.execute({
+          sql: 'SELECT id, user_id FROM subscriptions WHERE stripe_customer_id = ?',
+          args: [customerId],
         });
+
+        if (byCustomer.rows.length > 0) {
+          await db.execute({
+            sql: `
+              UPDATE subscriptions
+              SET stripe_subscription_id = ?, status = ?, current_period_end = ?
+              WHERE stripe_customer_id = ?
+            `,
+            args: [subscriptionId, status, currentPeriodEnd, customerId],
+          });
+        } else if (userIdFromRef) {
+          // Payment Link path: no row yet. Upsert against user_id and store
+          // the new stripe_customer_id so future subscription.* events match.
+          const byUser = await db.execute({
+            sql: 'SELECT id FROM subscriptions WHERE user_id = ?',
+            args: [userIdFromRef],
+          });
+
+          if (byUser.rows.length > 0) {
+            await db.execute({
+              sql: `
+                UPDATE subscriptions
+                SET stripe_customer_id = ?, stripe_subscription_id = ?, status = ?, current_period_end = ?
+                WHERE user_id = ?
+              `,
+              args: [customerId, subscriptionId, status, currentPeriodEnd, userIdFromRef],
+            });
+          } else {
+            await db.execute({
+              sql: `
+                INSERT INTO subscriptions (id, user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end)
+                VALUES (?, ?, ?, ?, ?, ?)
+              `,
+              args: [
+                crypto.randomUUID(),
+                userIdFromRef,
+                customerId,
+                subscriptionId,
+                status,
+                currentPeriodEnd,
+              ],
+            });
+          }
+        } else {
+          console.warn(`[Stripe Webhook] checkout.session.completed for customer ${customerId} with no matching user (no client_reference_id, no existing row).`);
+        }
 
         console.log(`[Stripe Webhook] checkout.session.completed for customer ${customerId}. Status: ${status}`);
         break;
