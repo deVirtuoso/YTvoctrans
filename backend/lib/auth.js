@@ -1,9 +1,9 @@
 import bcrypt from 'bcryptjs';
-import db, { initDb } from './db';
+import db from './db';
 import crypto from 'crypto';
 
-// Initialize the database tables when this module is loaded
-initDb();
+// db.js wraps the libsql client so every query awaits initialization on the
+// first call. No fire-and-forget initDb() needed here.
 
 export async function hashPassword(password) {
   return await bcrypt.hash(password, 10);

@@ -3,107 +3,139 @@ import { createClient } from '@libsql/client';
 const dbUrl = process.env.TURSO_DB_URL || 'file:./prisma/dev.db';
 const authToken = process.env.TURSO_DB_AUTH_TOKEN;
 
-const client = createClient({
+const rawClient = createClient({
   url: dbUrl,
   authToken: authToken,
 });
 
-// Helper to initialize tables if they don't exist
-export async function initDb() {
+let initPromise = null;
+
+async function runMigrations() {
+  await rawClient.execute(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      is_verified INTEGER DEFAULT 0,
+      verification_token TEXT,
+      reset_token TEXT,
+      reset_token_expires_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await rawClient.execute(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+
+  await rawClient.execute(`
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT UNIQUE NOT NULL,
+      stripe_customer_id TEXT,
+      stripe_subscription_id TEXT,
+      status TEXT NOT NULL,
+      current_period_end TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+
+  await rawClient.execute(`
+    CREATE TABLE IF NOT EXISTS allowances (
+      id TEXT PRIMARY KEY,
+      user_id TEXT UNIQUE NOT NULL,
+      daily_used INTEGER DEFAULT 0,
+      monthly_used INTEGER DEFAULT 0,
+      last_used_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+
+  await rawClient.execute(`
+    CREATE TABLE IF NOT EXISTS jobs (
+      id TEXT PRIMARY KEY,
+      video_id TEXT NOT NULL,
+      source_url TEXT NOT NULL,
+      src_lang TEXT NOT NULL,
+      tgt_lang TEXT NOT NULL,
+      status TEXT NOT NULL,
+      progress INTEGER DEFAULT 0,
+      error TEXT,
+      cues_json TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   try {
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        email TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_verified INTEGER DEFAULT 0,
-        verification_token TEXT,
-        reset_token TEXT,
-        reset_token_expires_at TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS sessions (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        expires_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-    `);
-
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS subscriptions (
-        id TEXT PRIMARY KEY,
-        user_id TEXT UNIQUE NOT NULL,
-        stripe_customer_id TEXT,
-        stripe_subscription_id TEXT,
-        status TEXT NOT NULL,
-        current_period_end TEXT,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-    `);
-
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS allowances (
-        id TEXT PRIMARY KEY,
-        user_id TEXT UNIQUE NOT NULL,
-        daily_used INTEGER DEFAULT 0,
-        monthly_used INTEGER DEFAULT 0,
-        last_used_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-    `);
-
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS jobs (
-        id TEXT PRIMARY KEY,
-        video_id TEXT NOT NULL,
-        source_url TEXT NOT NULL,
-        src_lang TEXT NOT NULL,
-        tgt_lang TEXT NOT NULL,
-        status TEXT NOT NULL,
-        progress INTEGER DEFAULT 0,
-        error TEXT,
-        cues_json TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    try {
-      await client.execute('ALTER TABLE jobs ADD COLUMN cues_json TEXT');
-    } catch (e) {
-      // ignore if column already exists
-    }
-
-
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS audio_segments (
-        id TEXT PRIMARY KEY,
-        job_id TEXT NOT NULL,
-        idx INTEGER NOT NULL,
-        audio_data BLOB NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS translation_segments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        job_id TEXT NOT NULL,
-        idx INTEGER NOT NULL,
-        t0 REAL NOT NULL,
-        t1 REAL NOT NULL,
-        text TEXT NOT NULL,
-        subs_json TEXT NOT NULL
-      );
-    `);
-    
-    console.log('[DB] Database tables initialized successfully.');
-  } catch (error) {
-    console.error('[DB] Failed to initialize database tables:', error);
+    await rawClient.execute('ALTER TABLE jobs ADD COLUMN cues_json TEXT');
+  } catch (e) {
+    // column already exists — ignore
   }
+
+  await rawClient.execute(`
+    CREATE TABLE IF NOT EXISTS audio_segments (
+      id TEXT PRIMARY KEY,
+      job_id TEXT NOT NULL,
+      idx INTEGER NOT NULL,
+      audio_data BLOB NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await rawClient.execute(`
+    CREATE TABLE IF NOT EXISTS translation_segments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id TEXT NOT NULL,
+      idx INTEGER NOT NULL,
+      t0 REAL NOT NULL,
+      t1 REAL NOT NULL,
+      text TEXT NOT NULL,
+      subs_json TEXT NOT NULL
+    );
+  `);
+
+  console.log('[DB] Database tables initialized successfully.');
 }
 
-export default client;
+export async function initDb() {
+  if (!initPromise) {
+    initPromise = runMigrations().catch((err) => {
+      // Reset so the next caller can retry instead of being permanently stuck.
+      initPromise = null;
+      console.error('[DB] Failed to initialize database tables:', err);
+      throw err;
+    });
+  }
+  return initPromise;
+}
+
+// Proxy the libsql client so every query implicitly awaits table initialization.
+// First request on a cold start pays the migration latency; subsequent requests
+// hit a cached resolved promise and pass straight through.
+const db = {
+  async execute(...args) {
+    await initDb();
+    return rawClient.execute(...args);
+  },
+  async batch(...args) {
+    await initDb();
+    return rawClient.batch(...args);
+  },
+  async transaction(...args) {
+    await initDb();
+    return rawClient.transaction(...args);
+  },
+  async sync(...args) {
+    return rawClient.sync(...args);
+  },
+  async close() {
+    return rawClient.close();
+  },
+};
+
+export default db;
