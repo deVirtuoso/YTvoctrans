@@ -183,7 +183,7 @@ function parseXmlCaptions(xmlText) {
  * Core asynchronous translation job execution runner.
  * @param {string} jobId - The unique identifier of this job.
  */
-export async function runTranslationJob(jobId) {
+export async function runTranslationJob(jobId, userId = null) {
   try {
     // 1. Fetch job parameters from database
     const jobRes = await db.execute({
@@ -319,5 +319,45 @@ export async function runTranslationJob(jobId) {
       sql: "UPDATE jobs SET status = 'failed', error = ? WHERE id = ?",
       args: [error.message || String(error), jobId],
     });
+
+    if (userId) {
+      try {
+        console.log(`[Job Worker] Job ${jobId} failed. Attempting to refund credit for user ${userId}...`);
+        const subResult = await db.execute({
+          sql: 'SELECT status FROM subscriptions WHERE user_id = ?',
+          args: [userId],
+        });
+        
+        let isPro = false;
+        if (subResult.rows.length > 0 && subResult.rows[0].status === 'active') {
+          isPro = true;
+        }
+
+        if (!isPro) {
+          const allowanceResult = await db.execute({
+            sql: 'SELECT daily_used, monthly_used FROM allowances WHERE user_id = ?',
+            args: [userId],
+          });
+
+          if (allowanceResult.rows.length > 0) {
+            let { daily_used, monthly_used } = allowanceResult.rows[0];
+            const newDaily = Math.max(0, daily_used - 1);
+            const newMonthly = Math.max(0, monthly_used - 1);
+
+            await db.execute({
+              sql: `
+                UPDATE allowances 
+                SET daily_used = ?, monthly_used = ? 
+                WHERE user_id = ?
+              `,
+              args: [newDaily, newMonthly, userId],
+            });
+            console.log(`[Job Worker] Successfully refunded 1 credit to user ${userId} for failed job ${jobId}`);
+          }
+        }
+      } catch (refundErr) {
+        console.error(`[Job Worker] Failed to refund credit for user ${userId}:`, refundErr);
+      }
+    }
   }
 }

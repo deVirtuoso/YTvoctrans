@@ -129,7 +129,7 @@ export async function POST(req) {
 
 
     // 3. Trigger the asynchronous background task on Vercel
-    waitUntil(runTranslationJob(jobId));
+    waitUntil(runTranslationJob(jobId, session.user.id));
 
     return new Response(JSON.stringify({ ok: true, jobId, status: 'processing' }), {
       status: 201,
