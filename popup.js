@@ -319,6 +319,7 @@ async function authenticateLocal(email, password) {
 
   const response = await fetch(`${AUTH_BASE_URL}/api/auth/login`, {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json"
     },
@@ -346,6 +347,7 @@ async function registerLocal(email, password) {
   
   const response = await fetch(`${AUTH_BASE_URL}/api/auth/signup`, {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json"
     },
