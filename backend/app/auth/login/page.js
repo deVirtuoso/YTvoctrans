@@ -89,7 +89,9 @@ function LoginFormContent() {
         <div style={styles.field}>
           <div style={styles.labelRow}>
             <label style={styles.label}>Password</label>
-            {/* Realistically forgot-password form would go here, we keep it simple for now */}
+            <Link href="/auth/forgot-password" style={styles.forgotLink}>
+              Forgot password?
+            </Link>
           </div>
           <input
             type="password"
@@ -298,6 +300,11 @@ const styles = {
   },
   googleIcon: {
     display: 'block',
+  },
+  forgotLink: {
+    fontSize: '12.5px',
+    color: '#a5b4fc',
+    textDecoration: 'none',
   },
   footerNote: {
     fontSize: '12px',

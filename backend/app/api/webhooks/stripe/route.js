@@ -36,43 +36,57 @@ export async function POST(req) {
         const session = event.data.object;
         const customerId = session.customer;
         const subscriptionId = session.subscription;
-        
-        // Retrieve full subscription detail to find period ends
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-        const currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
-        const status = subscription.status === 'active' ? 'active' : 'inactive';
 
-        // Update database with customer subscription parameters
+        if (!subscriptionId) {
+          console.warn('[Stripe Webhook] checkout.session.completed without subscription id, skipping.');
+          break;
+        }
+
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const periodEndUnix =
+          subscription.current_period_end ||
+          subscription.items?.data?.[0]?.current_period_end;
+        const currentPeriodEnd = periodEndUnix
+          ? new Date(periodEndUnix * 1000).toISOString()
+          : null;
+        const status = subscription.status;
+
         await db.execute({
           sql: `
-            UPDATE subscriptions 
-            SET stripe_subscription_id = ?, status = ?, current_period_end = ? 
+            UPDATE subscriptions
+            SET stripe_subscription_id = ?, status = ?, current_period_end = ?
             WHERE stripe_customer_id = ?
           `,
           args: [subscriptionId, status, currentPeriodEnd, customerId],
         });
-        
-        console.log(`[Stripe Webhook] Subscription success set to active for customer ${customerId}`);
+
+        console.log(`[Stripe Webhook] checkout.session.completed for customer ${customerId}. Status: ${status}`);
         break;
       }
 
+      case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
         const customerId = subscription.customer;
         const subscriptionId = subscription.id;
-        const status = subscription.status === 'active' ? 'active' : subscription.status;
-        const currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+        const status = subscription.status;
+        const periodEndUnix =
+          subscription.current_period_end ||
+          subscription.items?.data?.[0]?.current_period_end;
+        const currentPeriodEnd = periodEndUnix
+          ? new Date(periodEndUnix * 1000).toISOString()
+          : null;
 
         await db.execute({
           sql: `
-            UPDATE subscriptions 
-            SET stripe_subscription_id = ?, status = ?, current_period_end = ? 
+            UPDATE subscriptions
+            SET stripe_subscription_id = ?, status = ?, current_period_end = ?
             WHERE stripe_customer_id = ?
           `,
           args: [subscriptionId, status, currentPeriodEnd, customerId],
         });
 
-        console.log(`[Stripe Webhook] Subscription updated for customer ${customerId}. Status: ${status}`);
+        console.log(`[Stripe Webhook] Subscription ${event.type.split('.').pop()} for customer ${customerId}. Status: ${status}`);
         break;
       }
 

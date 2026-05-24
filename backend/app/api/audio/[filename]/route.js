@@ -7,7 +7,7 @@ export async function OPTIONS(req) {
 
 export async function GET(req, { params }) {
   const headers = corsHeaders(req);
-  const { filename } = params;
+  const { filename } = await params;
 
   if (!filename) {
     return new Response('Filename is required', { status: 400, headers });
